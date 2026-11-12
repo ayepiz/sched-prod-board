@@ -1,6 +1,6 @@
 // R6: copy app/ to dist/ and stamp the git sha into <meta name="build"> and the footer.
 import { execSync } from 'node:child_process';
-import { cpSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 
 const dirty = execSync('git status --porcelain -- app scripts').toString().trim();
 if (dirty && !process.argv.includes('--allow-dirty')) {
@@ -9,7 +9,8 @@ if (dirty && !process.argv.includes('--allow-dirty')) {
 }
 const sha = execSync('git rev-parse HEAD').toString().trim();
 rmSync('dist', { recursive: true, force: true });
-cpSync('app', 'dist', { recursive: true });
+mkdirSync('dist');
+for (const f of readdirSync('app')) copyFileSync(`app/${f}`, `dist/${f}`); // app/ is flat
 const html = readFileSync('dist/index.html', 'utf8').replaceAll('__BUILD_SHA__', sha);
 writeFileSync('dist/index.html', html);
 console.log(`built dist/ at ${sha}`);
