@@ -6,10 +6,16 @@ const loader = document.querySelector('[data-testid="loader"]');
 const empty = document.querySelector('[data-testid="empty"]');
 const list = document.querySelector('[data-testid="incident-list"]');
 const errorBox = document.querySelector('.error');
+const panel = document.querySelector('[data-testid="incident-panel"]');
+const panelAck = panel.querySelector('[data-testid="panel-ack"]');
 
 /** id -> <li>. Rows are kept, not re-rendered, so a refresh never drops a click or an acked mark. */
 const rows = new Map();
 const acked = new Set();
+/** id -> latest incident data, for the panel. */
+const incidentsById = new Map();
+/** The incident the panel is open on. Bound to an id, never to a list position (product decision, step 1). */
+let panelId = null;
 
 // R5: viewer's own zone and own field order (dd/mm in EU locales), 24h clock.
 const timeFmt = new Intl.DateTimeFormat(navigator.languages?.[0] ?? navigator.language, {
@@ -29,27 +35,72 @@ function el(tag, attrs = {}, text) {
   return node;
 }
 
-function markAcked(li, reply) {
+function markRowAcked(id, reply) {
+  const li = rows.get(id);
+  if (!li || li.querySelector('[data-testid="acked"]')) return;
   li.classList.add('is-acked');
-  const btn = li.querySelector('[data-testid="ack"]');
-  const mark = el('span', { 'data-testid': 'acked', class: 'acked', title: `acked ${reply.ackedAt}` }, '✓ acked');
-  btn.replaceWith(mark);
+  li.querySelector('.state').append(el('span', { 'data-testid': 'acked', class: 'acked', title: `acked ${reply.ackedAt}` }, '✓ acked'));
 }
 
-async function onAck(id, li, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Acking…';
+function renderPanel() {
+  const i = incidentsById.get(panelId);
+  if (!i) return;
+  panel.dataset.id = i.id;
+  panel.querySelector('.panel-id').textContent = i.id;
+  panel.querySelector('.panel-sev').textContent = i.severity;
+  panel.querySelector('.panel-sev').className = `panel-sev ${i.severity}`;
+  panel.querySelector('.panel-service').textContent = i.service;
+  panel.querySelector('.panel-region').textContent = i.region;
+  const t = panel.querySelector('.panel-time');
+  t.setAttribute('datetime', i.openedAt);
+  t.textContent = timeFmt.format(new Date(i.openedAt));
+  panel.querySelector('.panel-summary').textContent = i.summary;
+  const isAcked = acked.has(i.id);
+  panelAck.hidden = isAcked;
+  panelAck.disabled = false;
+  panelAck.textContent = `Ack ${i.id}`;
+  panel.querySelector('.panel-acked').hidden = !isAcked;
+}
+
+function openPanel(id) {
+  panelId = id;
+  for (const [rid, li] of rows) li.classList.toggle('is-selected', rid === id);
+  for (const [rid, li] of rows) li.setAttribute('aria-expanded', String(rid === id));
+  renderPanel();
+  panel.hidden = false;
+}
+
+function closePanel() {
+  panelId = null;
+  panel.hidden = true;
+  for (const li of rows.values()) {
+    li.classList.remove('is-selected');
+    li.setAttribute('aria-expanded', 'false');
+  }
+}
+
+async function onPanelAck() {
+  const id = panelId; // captured now: the ack goes to the incident the panel names, whatever the list does meanwhile
+  if (!id || acked.has(id)) return;
+  panelAck.disabled = true;
+  panelAck.textContent = `Acking ${id}…`;
   try {
     const reply = await ack(id); // R2: api.ack keeps the receipt and logs it
     acked.add(id);
-    markAcked(li, reply);
+    markRowAcked(id, reply);
   } catch (err) {
     console.error(err);
-    btn.disabled = false;
-    btn.textContent = 'Ack';
     showError(`Ack failed for ${id}. Try again.`);
+  } finally {
+    if (panelId === id) renderPanel();
   }
 }
+
+panelAck.addEventListener('click', onPanelAck);
+panel.querySelector('.panel-close').addEventListener('click', closePanel);
+addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !panel.hidden) closePanel();
+});
 
 function buildRow(i) {
   const li = el('li', { 'data-testid': 'incident-row', 'data-id': i.id, class: `row ${i.severity}` });
@@ -59,9 +110,19 @@ function buildRow(i) {
     el('span', { class: 'what' }, `${i.service} · ${i.region} · ${i.summary}`),
     el('time', { datetime: i.openedAt }, timeFmt.format(new Date(i.openedAt))),
   );
-  const btn = el('button', { type: 'button', 'data-testid': 'ack', class: 'ack' }, 'Ack');
-  btn.addEventListener('click', () => onAck(i.id, li, btn));
-  li.append(btn);
+  li.append(el('span', { class: 'state' }));
+  // The row opens its incident panel; Ack lives in the panel (product decision, step 1).
+  li.tabIndex = 0;
+  li.setAttribute('role', 'button');
+  li.setAttribute('aria-expanded', 'false');
+  li.setAttribute('aria-label', `${i.id} ${i.severity} ${i.service} ${i.summary}. Open incident panel`);
+  li.addEventListener('click', () => openPanel(i.id));
+  li.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openPanel(i.id);
+    }
+  });
   return li;
 }
 
@@ -79,6 +140,7 @@ function render(incidents) {
   let anchor = null; // the row the next one goes after
   for (const i of incidents) {
     seen.add(i.id);
+    incidentsById.set(i.id, i);
     let li = rows.get(i.id);
     if (!li) {
       li = buildRow(i);
@@ -94,8 +156,11 @@ function render(incidents) {
     if (!seen.has(id)) {
       li.remove();
       rows.delete(id);
+      incidentsById.delete(id);
+      if (panelId === id) closePanel();
     }
   }
+  if (panelId) renderPanel();
   empty.hidden = incidents.length > 0;
   list.hidden = incidents.length === 0;
 }
