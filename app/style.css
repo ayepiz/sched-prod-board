@@ -3,7 +3,7 @@ header, main, footer { padding: 12px 24px; }
 h1 { margin: 0; font-size: 22px; }
 .sub { margin: 2px 0 0; color: #666; }
 .list { list-style: none; margin: 0; padding: 0; max-width: 960px; }
-.row { display: grid; grid-template-columns: 90px 50px 1fr 200px auto; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #e5e5e5; background: #fff; }
+.row { display: grid; grid-template-columns: 90px 50px 1fr 200px 80px; cursor: pointer; gap: 12px; align-items: center; min-height: 44px; padding: 0 12px; border-bottom: 1px solid #e5e5e5; background: #fff; }
 .row .id { font-family: ui-monospace, monospace; }
 .row.sev1 .sev { color: #b00020; font-weight: 600; }
 .row.sev2 .sev { color: #a15c00; }
@@ -20,3 +20,19 @@ footer { color: #777; font-size: 13px; }
 .row .acked { color: #1b7f3b; font-weight: 600; }
 .row.is-acked { background: #f3faf5; }
 footer code { font-size: 12px; }
+.row:hover { background: #f5f7fb; }
+.row:focus-visible { outline: 2px solid #3b6fd8; outline-offset: -2px; }
+.row.is-selected { background: #e8eefc; box-shadow: inset 4px 0 0 #3b6fd8; }
+.row .state { text-align: right; }
+.panel { position: fixed; top: 16px; right: 16px; width: 260px; max-height: calc(100vh - 32px); overflow: auto; padding: 16px; background: #fff; border: 1px solid #d0d0d0; border-radius: 10px; box-shadow: 0 6px 24px rgba(0,0,0,.12); }
+.panel-head { display: flex; justify-content: space-between; align-items: center; padding: 0; }
+.panel-id { margin: 0; font: 600 20px ui-monospace, monospace; }
+.panel-close { font-size: 20px; line-height: 1; border: 0; background: none; cursor: pointer; color: #555; }
+.panel-sev { margin: 4px 0 8px; } .panel-sev.sev1 { color: #b00020; font-weight: 600; } .panel-sev.sev2 { color: #a15c00; }
+.panel-facts { display: grid; grid-template-columns: 70px 1fr; gap: 2px 8px; margin: 0 0 8px; } .panel-facts dt { color: #777; } .panel-facts dd { margin: 0; }
+.panel-summary { margin: 0 0 12px; }
+.panel-ack { width: 100%; font: 600 15px system-ui; padding: 8px; border: 1px solid #1b7f3b; border-radius: 6px; background: #1b7f3b; color: #fff; cursor: pointer; }
+.panel-ack:disabled { opacity: .6; cursor: default; }
+.panel-acked { margin: 0; color: #1b7f3b; font-weight: 600; }
+@media (max-width: 1290px) { main { padding-right: 300px; } }
+@media (max-width: 700px) { main { padding-right: 24px; padding-bottom: 260px; } .panel { top: auto; bottom: 0; left: 0; right: 0; width: auto; border-radius: 10px 10px 0 0; } }

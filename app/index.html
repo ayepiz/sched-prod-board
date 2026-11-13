@@ -19,6 +19,21 @@
       <p class="error" role="alert" hidden></p>
       <ul data-testid="incident-list" class="list" hidden></ul>
     </main>
+    <aside data-testid="incident-panel" class="panel" aria-labelledby="panel-title" hidden>
+      <header class="panel-head">
+        <h2 id="panel-title" class="panel-id"></h2>
+        <button type="button" class="panel-close" aria-label="Close panel">×</button>
+      </header>
+      <p class="panel-sev"></p>
+      <dl class="panel-facts">
+        <dt>service</dt><dd class="panel-service"></dd>
+        <dt>region</dt><dd class="panel-region"></dd>
+        <dt>opened</dt><dd><time class="panel-time"></time></dd>
+      </dl>
+      <p class="panel-summary"></p>
+      <button type="button" data-testid="panel-ack" class="panel-ack"></button>
+      <p class="panel-acked" hidden>✓ acked</p>
+    </aside>
     <footer>sched-prod incident board · build <code data-testid="build-sha">__BUILD_SHA__</code></footer>
   </body>
 </html>
